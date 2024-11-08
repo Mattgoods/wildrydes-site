@@ -1,130 +1,75 @@
-# AWS Project - Build a Full End-to-End Web Application with 7 Services | Step-by-Step Tutorial
+# Wild Rydes Unicorn Ride-Sharing Application 🦄🚗
 
-This repo contains the code files used in this [YouTube video](https://youtu.be/K6v6t5z6AsU).
+Welcome to the **Wild Rydes Unicorn Ride-Sharing Application**, a full-stack project designed for serverless deployment on AWS, inspired by the popular Uber model but with a magical twist—unicorns! This project showcases my skills in leveraging multiple AWS services to build scalable, modern applications.
 
-## TL;DR
-We're creating a web application for a unicorn ride-sharing service called Wild Rydes (from the original [Amazon workshop](https://aws.amazon.com/serverless-workshops)).  The app uses IAM, Amplify, Cognito, Lambda, API Gateway and DynamoDB, with code stored in GitHub and incorporated into a CI/CD pipeline with Amplify.
+## 📋 Project Overview
 
-The app will let you create an account and log in, then request a ride by clicking on a map (powered by ArcGIS).  The code can also be extended to build out more functionality.
+The Wild Rydes Unicorn Ride-Sharing Application allows users to:
+- Register and log in securely.
+- Request a "unicorn ride" by clicking on a map location.
+- Track their unicorn's journey as it "arrives" at their location.
 
-## Cost
-All services used are eligible for the [AWS Free Tier](https://aws.amazon.com/free/).  Outside of the Free Tier, there may be small charges associated with building the app (less than $1 USD), but charges will continue to incur if you leave the app running.  Please see the end of the YouTube video for instructions on how to delete all resources used in the video.
+The project incorporates key AWS services to handle user management, serverless computing, storage, and CI/CD integration, making it an ideal example of cloud application deployment and microservice architecture.
 
-## The Application Code
-The application code is here in this repository.
+## 🌐 Live Demo
+When fully deployed, the application generates a public URL for real-time access and sharing.
 
-## The Lambda Function Code
-Here is the code for the Lambda function, originally taken from the [AWS workshop](https://aws.amazon.com/getting-started/hands-on/build-serverless-web-app-lambda-apigateway-s3-dynamodb-cognito/module-3/ ), and updated for Node 20.x:
+## ⚙️ Technologies & AWS Services Used
 
-```node
-import { randomBytes } from 'crypto';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+This project uses a range of AWS services, creating a robust, secure, and highly scalable application infrastructure:
 
-const client = new DynamoDBClient({});
-const ddb = DynamoDBDocumentClient.from(client);
+- **Amazon Amplify**: Frontend hosting with CI/CD integration.
+- **Amazon Cognito**: User authentication and account management.
+- **AWS Lambda**: Serverless backend for managing ride requests.
+- **Amazon DynamoDB**: NoSQL database for storing ride information.
+- **Amazon API Gateway**: REST API setup to trigger Lambda functions from the frontend.
+- **GitHub**: Source control and CI/CD integration with Amplify.
 
-const fleet = [
-    { Name: 'Angel', Color: 'White', Gender: 'Female' },
-    { Name: 'Gil', Color: 'White', Gender: 'Male' },
-    { Name: 'Rocinante', Color: 'Yellow', Gender: 'Female' },
-];
+## 🚀 Deployment and CI/CD
 
-export const handler = async (event, context) => {
-    if (!event.requestContext.authorizer) {
-        return errorResponse('Authorization not configured', context.awsRequestId);
-    }
+The application is designed for quick and efficient deployment, thanks to the CI/CD pipeline through AWS Amplify. Whenever updates are made to the codebase on GitHub, the Amplify service automatically deploys the latest changes, ensuring the application stays up-to-date.
 
-    const rideId = toUrlString(randomBytes(16));
-    console.log('Received event (', rideId, '): ', event);
+## 🔒 Security and Authentication
 
-    const username = event.requestContext.authorizer.claims['cognito:username'];
-    const requestBody = JSON.parse(event.body);
-    const pickupLocation = requestBody.PickupLocation;
+User authentication is powered by Amazon Cognito, which ensures secure, scalable user management. The application also uses secure token-based authentication through API Gateway, giving users access to their ride-sharing account while keeping data protected.
 
-    const unicorn = findUnicorn(pickupLocation);
+## 📑 Getting Started
 
-    try {
-        await recordRide(rideId, username, unicorn);
-        return {
-            statusCode: 201,
-            body: JSON.stringify({
-                RideId: rideId,
-                Unicorn: unicorn,
-                Eta: '30 seconds',
-                Rider: username,
-            }),
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-            },
-        };
-    } catch (err) {
-        console.error(err);
-        return errorResponse(err.message, context.awsRequestId);
-    }
-};
+To deploy this application, follow these steps:
 
-function findUnicorn(pickupLocation) {
-    console.log('Finding unicorn for ', pickupLocation.Latitude, ', ', pickupLocation.Longitude);
-    return fleet[Math.floor(Math.random() * fleet.length)];
-}
+1. **Clone the Repository**:
+   Clone this repository into your GitHub account and create a new repo using the template.
 
-async function recordRide(rideId, username, unicorn) {
-    const params = {
-        TableName: 'Rides',
-        Item: {
-            RideId: rideId,
-            User: username,
-            Unicorn: unicorn,
-            RequestTime: new Date().toISOString(),
-        },
-    };
-    await ddb.send(new PutCommand(params));
-}
+2. **Set Up AWS Services**:
+   - Create a new Amazon Cognito user pool for secure user management.
+   - Set up a DynamoDB table named `Rides` to store ride request data.
+   - Deploy Lambda functions to handle ride requests and data processing.
+   - Configure Amazon API Gateway to handle client requests and integrate with Lambda.
 
-function toUrlString(buffer) {
-    return buffer.toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
-}
+3. **Connect Amplify with GitHub**:
+   Connect your Amplify app to this GitHub repository to set up continuous deployment.
 
-function errorResponse(errorMessage, awsRequestId) {
-    return {
-        statusCode: 500,
-        body: JSON.stringify({
-            Error: errorMessage,
-            Reference: awsRequestId,
-        }),
-        headers: {
-            'Access-Control-Allow-Origin': '*',
-        },
-    };
-}
-```
+4. **Deploy**:
+   Amplify will handle the rest! It will pull the code from GitHub, deploy the backend resources, and host the frontend.
 
-## The Lambda Function Test Function
-Here is the code used to test the Lambda function:
+5. **Test the App**:
+   Open the Amplify-hosted URL to see the application live. Register as a new user and request a unicorn to test functionality.
 
-```json
-{
-    "path": "/ride",
-    "httpMethod": "POST",
-    "headers": {
-        "Accept": "*/*",
-        "Authorization": "eyJraWQiOiJLTzRVMWZs",
-        "content-type": "application/json; charset=UTF-8"
-    },
-    "queryStringParameters": null,
-    "pathParameters": null,
-    "requestContext": {
-        "authorizer": {
-            "claims": {
-                "cognito:username": "the_username"
-            }
-        }
-    },
-    "body": "{\"PickupLocation\":{\"Latitude\":47.6174755835663,\"Longitude\":-122.28837066650185}}"
-}
-```
+## 🧩 Key Components
 
+- **Frontend**: Built with HTML and JavaScript, hosted on Amazon Amplify, and dynamically updated with Amplify’s CI/CD pipeline.
+- **Backend**: Serverless Lambda functions perform the core logic for ride requests, selecting unicorns, and communicating with DynamoDB.
+- **Data Storage**: Amazon DynamoDB stores ride information securely.
+- **API**: API Gateway creates a RESTful API to interact with the Lambda backend and user data in DynamoDB.
+
+## 🗑️ Cleanup (To Avoid Charges)
+
+1. **Delete the Amplify App**.
+2. **Remove Cognito User Pool**.
+3. **Delete Lambda Functions and DynamoDB Table**.
+4. **Clear API Gateway**.
+5. **Remove CloudWatch Logs**.
+
+## 📧 Contact
+
+If you have any questions about the project, feel free to reach out through GitHub. Thank you for checking out this project, and I hope it showcases my ability to develop and deploy cloud-based applications with AWS!
